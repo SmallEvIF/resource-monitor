@@ -34,7 +34,7 @@ class MyLogger(logging.Logger, metaclass=type):
     ):
         super().__init__(name, level)
         self.head = ""
-        self.log_path = log_path or os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+        self.log_path = log_path or os.path.join(os.path.dirname(__file__), "logs")
         self._init()
 
     def _init(self):
@@ -42,21 +42,20 @@ class MyLogger(logging.Logger, metaclass=type):
         self._init_handlers()
 
     def _init_handlers(self):
-        formatter = ColoredFormatter(
-            f'%(asctime)s <{self.head}> [%(name)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
+        format_style = f'%(asctime)s <{self.head}> [%(name)s] [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s'
+        color_formatter = ColoredFormatter(format_style, datefmt='%Y-%m-%d %H:%M:%S')
+        file_formatter = logging.Formatter(format_style, datefmt='%Y-%m-%d %H:%M:%S')
         file_name = os.path.join(self.log_path, f'{self.name}_{datetime.now().strftime("%Y%m%d")}.log')
         self.handlers = []
         # 创建文件处理器并设置日志格式
         file_handler = logging.FileHandler(file_name, encoding='utf-8')
         file_handler.setLevel(self.level)  # 文件日志级别为INFO
-        file_handler.setFormatter(formatter)
+        file_handler.setFormatter(file_formatter)
 
         # 创建控制台处理器并设置日志格式
         console_handler = logging.StreamHandler()
         console_handler.setLevel(self.level)  # 控制台日志级别为DEBUG
-        console_handler.setFormatter(formatter)
+        console_handler.setFormatter(color_formatter)
 
         # 将处理器添加到logger
         self.addHandler(file_handler)
