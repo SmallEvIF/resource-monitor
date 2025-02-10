@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body, Query
+from tortoise.transactions import in_transaction
 
 from monitor.models import TaxBusiness, TaxResource, TaxResourceMonitor
 from monitor.schemas import BusinessModel, ResourceModel, ResourceDeleteModel, MonitorUpdateModel, \
@@ -165,23 +166,25 @@ async def update_resource_monitor(
     :param monitor_update:
     :return:
     """
+
     resource = await TaxResource.get_or_none(id=monitor_update.resource_id)
     if resource is None:
         return {
             "code": 102,
             "message": "未查询到记录！"
         }
-    resource_version = 1
-    if monitor_update.resource_is_new is True:
-        monitor = await TaxResourceMonitor.get_or_none(
-            resource_id=monitor_update.resource_id,
-            resource_is_new=True
-        )
-        if monitor is not None:
-            resource_version = monitor.resource_version + 1
-            await monitor.update_from_dict({"resource_is_new": False})
-            await monitor.save()
-    await TaxResourceMonitor.create(**monitor_update.model_dump(), resource_version=resource_version)
+    async with in_transaction():
+        resource_version = 1
+        if monitor_update.resource_is_new is True:
+            monitor = await TaxResourceMonitor.filter(
+                resource_id=monitor_update.resource_id,
+                resource_is_new=True
+            ).select_for_update().first()
+            if monitor is not None:
+                resource_version = monitor.resource_version + 1
+                monitor.resource_is_new = False
+                await monitor.save()
+        await TaxResourceMonitor.create(**monitor_update.model_dump(), resource_version=resource_version)
     return {
         "code": 100,
         "message": "添加成功！"

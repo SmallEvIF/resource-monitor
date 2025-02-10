@@ -35,7 +35,8 @@ register_tortoise(
             "monitor.models"
         ]
     },
-    generate_schemas=False
+    generate_schemas=False,
+    add_exception_handlers=True
 )
 
 if __name__ == "__main__":
