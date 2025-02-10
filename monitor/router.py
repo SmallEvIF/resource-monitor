@@ -176,11 +176,14 @@ async def update_resource_monitor(
     async with in_transaction():
         resource_version = 1
         if monitor_update.resource_is_new is True:
-            monitor = await TaxResourceMonitor.filter(
-                resource_id=monitor_update.resource_id,
-                resource_is_new=True
-            ).select_for_update().first()
-            if monitor is not None:
+            monitors = await TaxResourceMonitor.filter(
+                resource_id=monitor_update.resource_id
+            ).select_for_update().all()
+            pre_new_monitor = [monitor for monitor in monitors if monitor.resource_is_new is True]
+            if len(pre_new_monitor) > 1:
+                raise Exception(f"资源【{resource.id}】存在多个最新资源文件！")
+            if pre_new_monitor:
+                monitor = pre_new_monitor[0]
                 resource_version = monitor.resource_version + 1
                 monitor.resource_is_new = False
                 await monitor.save()
